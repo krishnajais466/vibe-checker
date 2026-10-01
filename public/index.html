@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>KINETIC — Friend Compatibility Index</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            title: ['"Syne"', 'sans-serif'],
+            sans: ['"Space Grotesk"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            noir: '#08080C',
+            card: '#101118',
+            crimson: '#FF2A54',
+            gold: '#FFB800',
+            violet: '#8E44EC'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Firebase Cloud SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+
+  <!-- Story Export & QR Code Engines -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+  <style>
+    @media (pointer: fine) {
+      body { cursor: none; }
+      #custom-cursor {
+        pointer-events: none !important;
+        position: fixed;
+        width: 24px;
+        height: 24px;
+        border: 2px solid #FF2A54;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: transform 0.08s ease-out, width 0.2s, height 0.2s, border-color 0.2s;
+        z-index: 9999;
+      }
+      #cursor-dot {
+        pointer-events: none !important;
+        position: fixed;
+        width: 6px;
+        height: 6px;
+        background: #FFB800;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10000;
+      }
+    }
+    @media (pointer: coarse) {
+      #custom-cursor, #cursor-dot { display: none !important; }
+    }
+
+    .touch-ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,42,84,0.4) 0%, transparent 70%);
+      transform: scale(0);
+      animation: rippleAnim 0.5s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes rippleAnim {
+      to { transform: scale(3.5); opacity: 0; }
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+
+<body class="bg-noir text-slate-100 min-h-screen font-sans flex flex-col justify-between selection:bg-crimson selection:text-white relative overflow-x-hidden">
+
+  <!-- Desktop Custom Glowing Cursor -->
+  <div id="custom-cursor"></div>
+  <div id="cursor-dot"></div>
+
+  <!-- Ambient Backdrop -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-xl h-72 bg-gradient-to-b from-crimson/15 via-violet/10 to-transparent blur-3xl pointer-events-none -z-10"></div>
+
+  <!-- HEADER -->
+  <header class="w-full max-w-md mx-auto px-4 pt-5 pb-3 flex items-center justify-between z-20">
+    <div class="flex items-center gap-2 cursor-pointer" onclick="showView('create')">
+      <div class="w-8 h-8 rounded-lg bg-crimson flex items-center justify-center font-title font-extrabold text-white text-base shadow-[0_0_15px_rgba(255,42,84,0.5)]">
+        K
+      </div>
+      <div>
+        <h1 class="font-title font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent leading-none">
+          KINETIC
+        </h1>
+        <span class="text-[9px] font-mono uppercase tracking-widest text-slate-500">Compatibility Protocol</span>
+      </div>
+    </div>
+
+    <!-- Actions (Dashboard + Login) -->
+    <div class="flex items-center gap-2">
+      <button id="profile-nav-btn" onclick="openProfileDashboard()" class="hidden px-2.5 py-1.5 rounded-full border border-gold/30 bg-gold/10 hover:bg-gold/20 text-xs font-mono text-gold transition cursor-pointer flex items-center gap-1.5">
+        <span>⚡</span> <span>MY DASHBOARD</span>
+      </button>
+
+      <div id="auth-header-slot">
+        <button onclick="openAuthModal()" class="px-3 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-mono transition flex items-center gap-1.5 cursor-pointer">
+          <span class="w-1.5 h-1.5 rounded-full bg-crimson"></span>
+          <span>LOGIN</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT -->
+  <main class="w-full max-w-md mx-auto px-4 py-2 flex-grow flex flex-col justify-center z-10">
+
+    <!-- VIEW 1: CREATOR CONFIGURATION & 50 CATEGORIES -->
+    <section id="view-create" class="bg-card border border-white/10 rounded-3xl p-6 shadow-2xl relative">
+      <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-crimson/10 border border-crimson/25 text-[10px] font-mono text-crimson mb-4">
+        <span>●</span> 50-VECTOR PROFILER
+      </div>
+
+      <h2 class="font-title text-2xl font-bold tracking-tight text-white mb-2 leading-tight">
+        Discover who genuinely <span class="bg-gradient-to-r from-crimson via-gold to-crimson bg-clip-text text-transparent">understands</span> you.
+      </h2>
+      <p class="text-xs text-slate-400 mb-6 leading-relaxed">
+        Establish your true benchmarks across 50 lifestyle pillars. Friends must sign in to calibrate alignment, and you will see their exact answers on your dashboard.
+      </p>
+
+      <!-- Referral Banner -->
+      <div id="referral-banner" class="hidden mb-6 p-3 rounded-2xl bg-white/[0.03] border border-white/10 flex justify-between items-center text-xs">
+        <div>
+          <span class="text-slate-400 block text-[10px] font-mono">YOUR INVITE CODE</span>
+          <span id="my-ref-code" class="font-mono font-bold text-gold">REF-00000</span>
+        </div>
+        <div class="text-right">
+          <span class="text-slate-400 block text-[10px] font-mono">FRIENDS JOINED</span>
+          <span id="my-ref-count" class="font-mono font-bold text-crimson">0</span>
+        </div>
+      </div>
+
+      <!-- Categories Shelf -->
+      <div class="mb-6">
+        <div class="flex justify-between items-center mb-2">
+          <label class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Available Categories (Tap to Toggle)</label>
+          <span class="text-[10px] font-mono text-crimson font-bold" id="category-badge">50 ACTIVE</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto no-scrollbar pr-1" id="category-tag-cloud"></div>
+      </div>
+
+      <button onclick="handleStartCreatingClick()" class="w-full bg-gradient-to-r from-crimson via-crimson to-violet hover:opacity-95 text-white font-bold py-4 rounded-2xl text-sm font-mono tracking-wide shadow-[0_4px_25px_rgba(255,42,84,0.3)] transition active:scale-[0.98] cursor-pointer">
+        CONFIGURE BENCHMARK (5 Qs) →
+      </button>
+    </section>
+
+    <!-- VIEW 2: QUESTION CARD DECK -->
+    <section id="view-question" class="hidden bg-card border border-white/10 rounded-3xl p-6 shadow-2xl relative">
+      <div class="flex justify-between items-center mb-3">
+        <span id="q-category-label" class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-gold uppercase tracking-wider">
+          CATEGORY
+        </span>
+        <span id="q-counter" class="text-xs font-mono text-slate-400">01 / 05</span>
+      </div>
+
+      <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mb-6">
+        <div id="q-progress-bar" class="bg-gradient-to-r from-crimson to-gold h-full w-0 transition-all duration-300"></div>
+      </div>
+
+      <h3 id="q-text" class="font-title text-xl font-bold mb-6 text-white leading-snug min-h-[56px]">
+        Question goes here...
+      </h3>
+
+      <div id="q-options" class="space-y-3 mb-6"></div>
+    </section>
+
+    <!-- VIEW 3: SHARE LINK SCREEN -->
+    <section id="view-share" class="hidden bg-card border border-white/10 rounded-3xl p-6 text-center shadow-2xl">
+      <div class="w-14 h-14 bg-crimson/15 text-crimson rounded-2xl flex items-center justify-center mx-auto mb-4 border border-crimson/30 shadow-[0_0_20px_rgba(255,42,84,0.3)]">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+      </div>
+
+      <h2 class="font-title text-2xl font-bold mb-1 text-white">Vibe Protocol Generated</h2>
+      <p class="text-xs text-slate-400 mb-6">Your answers are stored in the cloud. Send this link to friends on WhatsApp or Instagram:</p>
+
+      <div class="bg-noir p-3 rounded-2xl border border-white/10 text-xs font-mono text-gold break-all mb-4 select-all" id="share-link-input">
+        https://...
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <button onclick="copyQuizLink()" class="w-full bg-white/10 hover:bg-white/15 text-white font-mono text-xs py-3.5 rounded-xl border border-white/10 transition cursor-pointer">
+          COPY LINK
+        </button>
+        <button onclick="shareOnWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs py-3.5 rounded-xl transition shadow-[0_0_15px_rgba(16,185,129,0.3)] cursor-pointer">
+          WHATSAPP
+        </button>
+      </div>
+
+      <div class="flex justify-between items-center text-xs font-mono pt-3 border-t border-white/5">
+        <button onclick="openProfileDashboard()" class="text-gold hover:underline cursor-pointer">
+          Go to My Dashboard →
+        </button>
+        <button onclick="showView('create')" class="text-slate-500 hover:text-slate-300 cursor-pointer">
+          + Create Another
+        </button>
+      </div>
+    </section>
+
+    <!-- VIEW 4: FRIEND TAKING TEST (START GATE) -->
+    <section id="view-friend-gate" class="hidden bg-card border border-white/10 rounded-3xl p-6 shadow-2xl">
+      <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gold/10 border border-gold/25 text-[10px] font-mono text-gold mb-4">
+        <span>●</span> INCOMING COMPATIBILITY INQUIRY
+      </div>
+
+      <h2 class="font-title text-2xl font-bold mb-2">
+        <span id="friend-creator-name" class="text-crimson">A Friend</span> wants to verify your vibe match.
+      </h2>
+      <p class="text-xs text-slate-400 mb-6">
+        Log in to answer these 5 scenarios. Both you and your friend will receive side-by-side match breakdown reports.
+      </p>
+
+      <div id="friend-logged-in-box" class="hidden mb-6 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+        <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">Testing As</span>
+        <div class="text-sm font-bold text-white font-mono flex items-center justify-between">
+          <span id="friend-logged-in-username">username</span>
+          <span class="text-[10px] text-emerald-400 font-normal">● Ready</span>
+        </div>
+      </div>
+
+      <button id="friend-gate-action-btn" onclick="handleFriendGateAction()" class="w-full bg-crimson hover:bg-crimson/90 text-white font-mono font-bold py-4 rounded-2xl text-sm transition shadow-[0_0_20px_rgba(255,42,84,0.3)] cursor-pointer">
+        LOGIN TO BEGIN VIBE CALIBRATION →
+      </button>
+    </section>
+
+    <!-- VIEW 5: MATCH SCORE & SIDE-BY-SIDE REVEAL -->
+    <section id="view-result" class="hidden bg-card border border-white/10 rounded-3xl p-6 shadow-2xl">
+      <div class="text-center mb-6">
+        <span class="text-[10px] font-mono uppercase tracking-widest text-slate-400 block mb-1">FINAL ALIGNMENT</span>
+        <div id="match-score-big" class="font-title text-6xl font-extrabold text-transparent bg-gradient-to-r from-crimson via-gold to-crimson bg-clip-text">
+          0%
+        </div>
+        <p id="match-tier-badge" class="text-sm font-bold text-white mt-1">Calibrating...</p>
+      </div>
+
+      <!-- INSTAGRAM STORY EXPORT BUTTON -->
+      <button onclick="exportStoryCard()" class="w-full mb-4 bg-gradient-to-r from-violet via-crimson to-gold hover:opacity-95 text-white font-mono font-bold text-xs py-4 rounded-xl transition shadow-[0_0_20px_rgba(255,42,84,0.4)] flex items-center justify-center gap-2 cursor-pointer">
+        <span>📸</span>
+        <span>SHARE TO INSTAGRAM STORY</span>
+      </button>
+
+      <h4 class="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-3">Side-by-Side Breakdown</h4>
+      <div id="answers-comparison-list" class="space-y-2.5 max-h-52 overflow-y-auto no-scrollbar mb-6 pr-1"></div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="openProfileDashboard()" class="w-full bg-gold/15 border border-gold/30 hover:bg-gold/25 text-gold font-mono text-xs py-3.5 rounded-xl transition cursor-pointer">
+          MY DASHBOARD
+        </button>
+        <button onclick="showView('create')" class="w-full bg-white/10 hover:bg-white/15 text-white font-mono text-xs py-3.5 rounded-xl border border-white/10 transition cursor-pointer">
+          CREATE MY OWN →
+        </button>
+      </div>
+    </section>
+
+    <!-- VIEW 6: USER PROFILE & DASHBOARD -->
+    <section id="view-profile" class="hidden bg-card border border-white/10 rounded-3xl p-6 shadow-2xl">
+      <div class="flex justify-between items-start mb-6 pb-4 border-b border-white/10">
+        <div>
+          <span class="text-[10px] font-mono text-gold uppercase tracking-wider block">USER PROFILE</span>
+          <h2 id="profile-user-title" class="font-title text-2xl font-bold text-white">@username</h2>
+          <span id="profile-ref-info" class="text-[11px] font-mono text-slate-400">Invite Code: REF-XXXXX (0 Friends)</span>
+        </div>
+        <button onclick="showView('create')" class="px-3 py-1.5 rounded-xl bg-crimson hover:bg-crimson/90 text-white font-mono text-xs font-bold transition cursor-pointer">
+          + NEW QUIZ
+        </button>
+      </div>
+
+      <h3 class="font-title text-sm font-bold text-white mb-3 flex items-center justify-between">
+        <span>📋 Quizzes You Created</span>
+        <span id="user-quizzes-count" class="text-xs font-mono text-slate-400">0 found</span>
+      </h3>
+
+      <div id="user-quizzes-list" class="space-y-4 max-h-96 overflow-y-auto no-scrollbar pr-1"></div>
+    </section>
+
+  </main>
+
+  <!-- AUTHENTICATION MODAL -->
+  <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+    <div class="bg-card border border-white/15 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-mono text-sm cursor-pointer">✕</button>
+      
+      <h3 id="auth-modal-title" class="font-title text-xl font-bold mb-1 text-white">Sign In</h3>
+      <p id="auth-modal-subtitle" class="text-xs text-slate-400 mb-5">Sign in to save quizzes & track friend matches.</p>
+
+      <div class="space-y-3 mb-5">
+        <div>
+          <label class="block text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1">Username</label>
+          <input type="text" id="auth-user" class="w-full bg-noir border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-crimson">
+        </div>
+        <div>
+          <label class="block text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1">Password</label>
+          <input type="password" id="auth-pass" class="w-full bg-noir border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-crimson">
+        </div>
+        <div id="ref-field-slot" class="hidden">
+          <label class="block text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1">Referral Code (Optional)</label>
+          <input type="text" id="auth-ref" placeholder="REF-XXXXX" class="w-full bg-noir border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-crimson uppercase">
+        </div>
+      </div>
+
+      <button id="auth-submit-btn" onclick="handleAuthSubmit()" class="w-full bg-crimson hover:bg-crimson/90 text-white font-mono font-bold py-3 rounded-xl text-xs transition mb-3 cursor-pointer">
+        CONFIRM & LOGIN
+      </button>
+
+      <p class="text-center text-[11px] text-slate-400">
+        <span id="auth-switch-text">Need an account?</span>
+        <button onclick="toggleAuthMode()" id="auth-switch-btn" class="text-crimson font-bold underline ml-1 cursor-pointer">Create one</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- BREAKDOWN MODAL -->
+  <div id="breakdown-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+    <div class="bg-card border border-white/15 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+      <button onclick="closeBreakdownModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-mono text-sm cursor-pointer">✕</button>
+      
+      <div class="mb-4">
+        <span class="text-[10px] font-mono text-gold uppercase tracking-wider block">RESPONSE INSPECTOR</span>
+        <h3 id="breakdown-modal-title" class="font-title text-xl font-bold text-white">Friend vs You</h3>
+      </div>
+
+      <div id="breakdown-modal-content" class="space-y-2.5 max-h-80 overflow-y-auto no-scrollbar mb-4 pr-1"></div>
+
+      <button onclick="closeBreakdownModal()" class="w-full bg-white/10 hover:bg-white/15 text-white font-mono text-xs py-3 rounded-xl transition cursor-pointer">
+        CLOSE
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- OFF-SCREEN 1080x1920 INSTAGRAM STORY CANVAS WITH DYNAMIC QR -->
+  <!-- ============================================================ -->
+  <div id="story-card-template" style="position: fixed; left: -9999px; top: -9999px; width: 1080px; height: 1920px; font-family: 'Space Grotesk', sans-serif;" class="bg-[#08080C] text-slate-100 p-16 flex flex-col justify-between relative overflow-hidden">
+    
+    <!-- Ambient Gradients -->
+    <div style="position: absolute; top: -200px; left: 50%; transform: translateX(-50%); width: 1000px; height: 800px; background: radial-gradient(circle, rgba(255,42,84,0.3) 0%, rgba(142,68,236,0.15) 50%, transparent 80%); filter: blur(90px); pointer-events: none;"></div>
+    <div style="position: absolute; bottom: -200px; right: -200px; width: 800px; height: 800px; background: radial-gradient(circle, rgba(255,184,0,0.15) 0%, transparent 70%); filter: blur(100px); pointer-events: none;"></div>
+
+    <!-- Header -->
+    <div class="relative z-10 flex items-center justify-between border-b border-white/10 pb-10">
+      <div class="flex items-center gap-5">
+        <div class="w-16 h-16 rounded-2xl bg-[#FF2A54] flex items-center justify-center font-['Syne'] font-extrabold text-white text-3xl shadow-[0_0_35px_rgba(255,42,84,0.6)]">
+          K
+        </div>
+        <div>
+          <h1 class="font-['Syne'] font-extrabold text-4xl tracking-tight text-white leading-none">KINETIC</h1>
+          <span class="text-lg font-mono uppercase tracking-[0.3em] text-slate-500">Compatibility Index</span>
+        </div>
+      </div>
+      <div class="px-5 py-2.5 rounded-full border border-white/10 bg-white/5 font-mono text-xl text-slate-400">
+        AUTHENTICATED PROTOCOL
+      </div>
+    </div>
+
+    <!-- Central Score Display -->
+    <div class="relative z-10 text-center my-auto py-10">
+      <div class="inline-block px-6 py-2.5 rounded-full bg-[#FFB800]/10 border border-[#FFB800]/30 font-mono text-2xl text-[#FFB800] tracking-wider mb-8">
+        PAIRWISE RESONANCE REPORT
+      </div>
+
+      <!-- User Handles -->
+      <div class="flex items-center justify-center gap-6 font-['Syne'] text-5xl font-bold text-white mb-8">
+        <span id="story-creator-name" class="text-white">@creator</span>
+        <span class="text-[#FF2A54] text-4xl font-mono">✕</span>
+        <span id="story-taker-name" class="text-[#FFB800]">@friend</span>
+      </div>
+
+      <!-- Big Match % -->
+      <div class="relative inline-block my-2">
+        <div id="story-score" class="font-['Syne'] text-[180px] font-extrabold leading-none bg-gradient-to-r from-[#FF2A54] via-[#FFB800] to-[#FF2A54] bg-clip-text text-transparent drop-shadow-[0_10px_35px_rgba(255,42,84,0.4)]">
+          0%
+        </div>
+      </div>
+
+      <div id="story-tier" class="font-['Syne'] text-4xl font-bold text-white tracking-wide mt-4">
+        Calibrating...
+      </div>
+    </div>
+
+    <!-- Top 3 Match Highlights -->
+    <div class="relative z-10 bg-[#101118]/80 border border-white/10 rounded-3xl p-8 mb-6 backdrop-blur-md">
+      <span class="text-sm font-mono uppercase tracking-widest text-slate-500 block mb-4">VECTOR BREAKDOWN</span>
+      <div id="story-highlights-list" class="space-y-3 font-mono text-xl"></div>
+    </div>
+
+    <!-- QR Code Callout & Footer -->
+    <div class="relative z-10 flex items-center justify-between border-t border-white/10 pt-8 mt-auto">
+      <div class="flex items-center gap-6">
+        <div class="w-36 h-36 bg-white p-2.5 rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(255,255,255,0.15)]">
+          <canvas id="story-qr-canvas" class="w-full h-full"></canvas>
+        </div>
+        <div>
+          <span class="text-xs font-mono uppercase tracking-[0.25em] text-[#FFB800] block mb-1">SCAN WITH CAMERA</span>
+          <h4 class="font-['Syne'] text-3xl font-bold text-white leading-tight">Test Your Resonance</h4>
+          <span id="story-app-url" class="text-slate-400 font-mono text-lg block mt-1">kinetic.web.app</span>
+        </div>
+      </div>
+
+      <div class="text-right font-mono">
+        <span class="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-lg block mb-1">
+          50-VECTOR MATRIX
+        </span>
+        <span class="text-xs text-slate-500 uppercase tracking-widest">KINETIC PROTOCOL</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER & OFFICIAL CREDITS -->
+  <footer class="w-full max-w-md mx-auto px-4 py-5 text-center z-20 border-t border-white/5">
+    <div class="flex items-center justify-center gap-4 mb-2">
+      <a href="https://www.instagram.com/amour_krishna/" target="_blank" rel="noopener noreferrer" class="text-xs font-mono text-slate-400 hover:text-crimson transition flex items-center gap-1 cursor-pointer">
+        <span>Instagram</span>
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+      </a>
+      <span class="text-slate-600">•</span>
+      <a href="https://www.linkedin.com/in/krishna-jaiswal-it/" target="_blank" rel="noopener noreferrer" class="text-xs font-mono text-slate-400 hover:text-gold transition flex items-center gap-1 cursor-pointer">
+        <span>LinkedIn</span>
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+      </a>
+    </div>
+    <p class="text-[11px] font-mono text-slate-500">
+      Engineered & Designed by <span class="text-slate-300 font-bold">Krishna Jaiswal</span>
+    </p>
+  </footer>
+
+  <script>
+    // ============================================================
+    // 1. FIREBASE CONFIGURATION
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtAUOAvq7AUVTn1L53xcB9iGtn_vFyYJM",
+      authDomain: "vibe-checker-4a743.firebaseapp.com",
+      projectId: "vibe-checker-4a743",
+      storageBucket: "vibe-checker-4a743.firebasestorage.app",
+      messagingSenderId: "859160087145",
+      appId: "1:859160087145:web:9c53a694892a481a5270f8",
+      measurementId: "G-J1G315SJ5B"
+    };
+
+    let fsDb = null;
+    let isFirestoreReady = false;
+
+    try {
+      if (typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        fsDb = firebase.firestore();
+        isFirestoreReady = true;
+      }
+    } catch (e) {
+      console.warn("Firestore initialization error:", e.message);
+    }
+
+    // ============================================================
+    // 2. 50 CURATED CATEGORIES
+    // ============================================================
+    const CATEGORIES_50 = [
+      { id: "c1", category: "Core Ethics", question: "When caught in an ethical gray area, what wins?", options: ["Strict utilitarian outcome", "Unshakable personal integrity", "Empathy for vulnerable parties", "Pragmatic self-defense"] },
+      { id: "c2", category: "Career Drive", question: "What represents the pinnacle of professional success?", options: ["Uncapped capital leverage", "Total creative autonomy", "Mastery of hard crafts", "Broad systemic social impact"] },
+      { id: "c3", category: "Conflict Response", question: "When friction builds with a close friend, you:", options: ["Call them immediately to dissect it", "Take 48 hours to cool down", "Write a long-form rationale", "Let small things slide quietly"] },
+      { id: "c4", category: "Money Philosophy", question: "Your instinctual discipline with money:", options: ["Aggressive compounding investor", "Hedonic experience seeker", "Defensive cash hoarder", "Living paycheck-to-paycheck"] },
+      { id: "c5", category: "Travel DNA", question: "Your ideal journey into the unknown:", options: ["Unplanned off-grid exploration", "5-star curated luxury retreat", "Solo deep cultural immersion", "High-energy urban expedition"] },
+      { id: "c6", category: "Circadian Rhythm", question: "When does your mind operate at absolute peak?", options: ["5 AM silent dawn", "2 AM midnight quiet", "Afternoon execution sprint", "Unpredictable chaotic bursts"] },
+      { id: "c7", category: "Social Battery", question: "How do you recharge when fully depleted?", options: ["Complete solitude in silence", "1-on-1 dialogue with trusted peer", "Energetic party atmosphere", "Exhausting physical workout"] },
+      { id: "c8", category: "Communication", question: "Your favorite medium for genuine conversations:", options: ["Spontaneous unscheduled calls", "Tactical micro-text updates", "Asynchronous voice memos", "Face-to-face reunions only"] },
+      { id: "c9", category: "Culinary Palate", question: "When a bizarre, exotic dish is on the menu:", options: ["Order it without hesitation", "Try a tentative bite first", "Stick strictly to comfort food", "Food is merely fuel to me"] },
+      { id: "c10", category: "Cinema Taste", question: "Which cinematic genre holds your respect most?", options: ["Mind-bending psychological thrillers", "Hard sci-fi & space epics", "Raw investigative documentaries", "Witty, character-led dark comedy"] },
+      { id: "c11", category: "Humor Caliber", question: "The type of humor that cracks you up easiest:", options: ["Dry, poker-faced deadpan", "Absurdist surreal shitposts", "Razor-sharp intellectual sarcasm", "Physical situational comedy"] },
+      { id: "c12", category: "Decision Making", question: "Faced with a non-reversible fork in the road:", options: ["Exhaustive statistical pro/con matrix", "Visceral gut intuition", "Council of trusted mentors", "Flip a coin and execute fast"] },
+      { id: "c13", category: "Stress Tolerance", question: "Under emergency crisis conditions, you become:", options: ["Cold, hyper-focused executor", "Vocally expressive processor", "Withdrawn into stoic isolation", "Distracted looking for escape"] },
+      { id: "c14", category: "Trust Dealbreakers", question: "What terminates a friendship instantly?", options: ["Leaking private disclosures", "Chronic passive-aggressive envy", "Flaking repeatedly on commitments", "Selfishness in tough moments"] },
+      { id: "c15", category: "Physicality", question: "Your primary relationship with physical health:", options: ["Data-driven heavy weightlifting", "Competitive recreational sports", "Casual walks & mindful eating", "Sporadic bursts when motivated"] },
+      { id: "c16", category: "Digital Diet", question: "Your posture toward online platforms:", options: ["Ghost account lurking silently", "Strictly detached / often deleted", "Active creative voice & curator", "Essential headline aggregator"] },
+      { id: "c17", category: "Solitude Quota", question: "Daily requirement of completely uninterrupted solitude:", options: ["3+ hours minimum or I crash", "1 hour before sleep is enough", "I wither without social company", "Variable depending on my workload"] },
+      { id: "c18", category: "Spontaneity", question: "A friend says 'pack a bag, we leave in 20 mins':", options: ["Already in the passenger seat", "Demand destination and logistics", "Decline without advance booking", "Suggest doing it next weekend"] },
+      { id: "c19", category: "Validation Language", question: "How do you primarily express love to peers?", options: ["Curated, hyper-specific gifts", "Relentless practical assistance", "Unfiltered verbal affirmations", "Guaranteed undivided attention"] },
+      { id: "c20", category: "Creative Vector", question: "Your chosen realm of creative output:", options: ["Code, systems, & software architecture", "Visuals, aesthetics, & photography", "Essays, prose, & sharp discourse", "Music composition & soundscapes"] },
+      { id: "c21", category: "Worldview", question: "Your genuine forecast on civilizational fate:", options: ["Techno-optimistic superabundance", "Grounded historical cycles", "Stoic philosophical acceptance", "Critical defensive skepticism"] },
+      { id: "c22", category: "Acoustics", question: "How does music accompany your daily flow?", options: ["Constant binaural/beats in my ears", "Intentional vinyl/album listening", "Only for commute or workouts", "Complete acoustic silence"] },
+      { id: "c23", category: "Pet Peeves", question: "The human habit that evaporates your patience:", options: ["Chronic, remorseless tardiness", "Talking loudly over others", "Performative virtue signaling", "Blasting phone audio in public"] },
+      { id: "c24", category: "Workspace", question: "The state of your desk and digital workspace:", options: ["Surgically minimal & spotless", "Dense, methodical organization", "Cluttered mess that makes sense", "Constantly in flux"] },
+      { id: "c25", category: "Next Frontier", question: "Your core priority over the next 24 months:", options: ["Outsized capital acquisition", "Technical supremacy in my craft", "Deepening lifetime relationships", "Global relocation & exploration"] },
+      { id: "c26", category: "Risk Appetite", question: "When asymmetric upside presents itself:", options: ["Conviction all-in bet", "Calculated fractional bet", "Pass defensively", "Only bet with insurance"] },
+      { id: "c27", category: "Civic Purpose", question: "How should one serve the broader collective?", options: ["Building high-utility tools & software", "Direct boots-on-the-ground patronage", "Financial capital allocation", "Guarding one's immediate tribe"] },
+      { id: "c28", category: "Temporal Lens", question: "Where does your active headspace dwell?", options: ["10 years into theoretical futures", "100% present in the immediate hour", "Reflecting & analyzing past events", "Balanced across all three"] },
+      { id: "c29", category: "Learning Speed", question: "How do you absorb an intricate new skill?", options: ["Tear things apart and build manually", "Read foundational textbooks", "Watch breakdowns by masters", "Debate concepts with veterans"] },
+      { id: "c30", category: "Milestone Rituals", question: "How do you celebrate personal birthdays?", options: ["Low-key dinner with 2-3 inner circle", "Expansive house party with everyone", "Solo flight to an unfamiliar city", "Treat it like any normal workday"] },
+      { id: "c31", category: "Materialism", question: "Your posture toward luxury possessions:", options: ["Worthless vanity symbols", "Appreciate high craftsmanship", "Love prestige and status", "Indifferent if it works"] },
+      { id: "c32", category: "Loyalty Scope", question: "If a close friend makes an undeniable mistake:", options: ["Defend them publicly, correct privately", "Hold them strictly accountable publicly", "Distance myself until settled", "Disown them immediately"] },
+      { id: "c33", category: "Patience Threshold", question: "Dealing with bureaucracy or endless lines:", options: ["Calmly listen to audiobooks", "Simmer with visible internal rage", "Find a loophole to skip ahead", "Abandon the endeavor altogether"] },
+      { id: "c34", category: "Conformity", question: "When an entire room agrees on something silly:", options: ["Vocalize the contrarian view instantly", "Smile and stay strategically quiet", "Agree just to keep harmony", "Exit the conversation"] },
+      { id: "c35", category: "Dark Humor", question: "Your tolerance for morbid, pitch-black jokes:", options: ["Limitless, nothing is sacred", "Appreciate if it is genuinely clever", "Slightly uncomfortable but laugh", "Offensive and unacceptable"] },
+      { id: "c36", category: "Ghosting Stance", question: "What is your stance on cutting ties silently?", options: ["Sometimes necessary for peace", "Only for abusive behavior", "Cowardly; always give closure", "Never acceptable under any case"] },
+      { id: "c37", category: "Reading Diet", question: "Your favorite type of reading material:", options: ["Dense philosophy & history books", "Sci-fi and immersive fiction", "Actionable business/tech blogs", "Short-form articles & threads"] },
+      { id: "c38", category: "Jealousy Check", question: "When a peer accomplishes a huge triumph:", options: ["Pure, unadulterated admiration", "Inspired to double my own grind", "Mild competitive sting inside", "Indifferent"] },
+      { id: "c39", category: "Animal Affinity", question: "Your animal companionship inclination:", options: ["Devoted canine enthusiast", "Independent feline companion", "Fascinated by wild untamed fauna", "Zero desire for domestic pets"] },
+      { id: "c40", category: "Adrenaline", question: "Extreme sports like skydiving or free-diving:", options: ["Already on my bucket list", "Would try with extreme safety checks", "Zero interest in risking life", "Only for huge rewards"] },
+      { id: "c41", category: "Minimalism", question: "Could you live out of a single carry-on bag?", options: ["Easily, I thrive on lightness", "Could manage for a few months", "Impossible, I need my belongings", "Prefer my creature comforts"] },
+      { id: "c42", category: "Secret Keeping", question: "Entrusted with a volatile classified secret:", options: ["Take it to my physical grave", "Might share with my partner only", "Slip it out if alcohol is involved", "Bursting to tell someone"] },
+      { id: "c43", category: "Leadership Style", question: "When placed in charge of a chaotic team:", options: ["Direct command and strict ownership", "Collaborative consensus builder", "Lead silently by personal example", "Delegate everything and oversee"] },
+      { id: "c44", category: "Empathy Depth", question: "Watching strangers endure emotional trauma:", options: ["Feel their pain in my own chest", "Sympathize but maintain boundaries", "Analyze practical solutions to fix it", "Mostly numb to strangers"] },
+      { id: "c45", category: "Forgiveness", question: "Can a ruptured bond be fully restored?", options: ["Forgive easily, but never forget", "True restoration is possible", "Once cracked, it is over forever", "Hold generational grudges"] },
+      { id: "c46", category: "Nightlife Taste", question: "Your idea of an unforgettable night out:", options: ["Underground warehouse DJ set", "Intimate rooftop speakeasy", "Competitive boardgame midnight marathon", "Curled in bed asleep by 10 PM"] },
+      { id: "c47", category: "Superpower Wish", question: "If you could pick one supernatural gift:", options: ["Teleportation across galaxies", "Fluency in all human languages", "Rewind time by 5 minutes at will", "Read minds without detection"] },
+      { id: "c48", category: "Fashion Posture", question: "Your approach to dressing yourself:", options: ["Functional monochrome uniform", "Trendsetting avant-garde pieces", "Classic timeless heritage fits", "Whatever is on top of the pile"] },
+      { id: "c49", category: "Debating Style", question: "In a fiery intellectual disagreement:", options: ["Relentless logic until opponent yields", "Seek mutual synthesis and compromise", "Agree to disagree playfully", "Shut down if voices rise"] },
+      { id: "c50", category: "Legacy Notion", question: "How do you wish to be remembered?", options: ["Built monumental things that endure", "Loved fiercely by those closest", "Challenged the status quo boldly", "Forgotten; existence is fleeting"] }
+    ];
+
+    // ============================================================
+    // 3. APPLICATION STATE
+    // ============================================================
+    let currentUser = JSON.parse(localStorage.getItem('kinetic_active_user') || 'null');
+    let selectedCategoryIds = new Set(CATEGORIES_50.map(c => c.id));
+    let activeQuestions = [];
+    let currentQIndex = 0;
+    let recordedChoices = [];
+    let activeQuizId = null;
+    let isFriendMode = false;
+    let authIsSignup = false;
+    let postAuthAction = null;
+
+    // ============================================================
+    // 4. VIEW CONTROLLER
+    // ============================================================
+    window.showView = function(viewName) {
+      const views = ['create', 'question', 'share', 'friend-gate', 'result', 'profile'];
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.add('hidden');
+      });
+      const activeEl = document.getElementById(`view-${viewName}`);
+      if (activeEl) activeEl.classList.remove('hidden');
+    };
+
+    // ============================================================
+    // 5. AUTHENTICATION & LOGIN ENFORCEMENT
+    // ============================================================
+    window.openAuthModal = function(reason = 'Sign In') {
+      document.getElementById('auth-modal-title').innerText = authIsSignup ? 'Create Account' : reason;
+      document.getElementById('auth-modal').classList.remove('hidden');
+      document.getElementById('auth-modal').classList.add('flex');
+    };
+
+    window.closeAuthModal = function() {
+      document.getElementById('auth-modal').classList.add('hidden');
+      document.getElementById('auth-modal').classList.remove('flex');
+    };
+
+    window.toggleAuthMode = function() {
+      authIsSignup = !authIsSignup;
+      document.getElementById('auth-modal-title').innerText = authIsSignup ? 'Create Account' : 'Sign In';
+      document.getElementById('auth-submit-btn').innerText = authIsSignup ? 'REGISTER & ENTER' : 'CONFIRM & LOGIN';
+      document.getElementById('auth-switch-text').innerText = authIsSignup ? 'Already have an account?' : 'Need an account?';
+      document.getElementById('auth-switch-btn').innerText = authIsSignup ? 'Sign in' : 'Create one';
+      
+      const refSlot = document.getElementById('ref-field-slot');
+      if (authIsSignup) {
+        refSlot.classList.remove('hidden');
+      } else {
+        refSlot.classList.add('hidden');
+      }
+    };
+
+    window.updateAuthUI = function() {
+      const slot = document.getElementById('auth-header-slot');
+      const profileNavBtn = document.getElementById('profile-nav-btn');
+      const banner = document.getElementById('referral-banner');
+
+      if (currentUser) {
+        profileNavBtn.classList.remove('hidden');
+        slot.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-white font-bold">${currentUser.username}</span>
+            <button onclick="logout()" class="text-[10px] font-mono text-slate-500 hover:text-crimson cursor-pointer">EXIT</button>
+          </div>
+        `;
+        if (banner) {
+          banner.classList.remove('hidden');
+          document.getElementById('my-ref-code').innerText = currentUser.referralCode || 'REF-VIP';
+          document.getElementById('my-ref-count').innerText = currentUser.referralCount || '0';
+        }
+
+        const friendLogBox = document.getElementById('friend-logged-in-box');
+        const friendBtn = document.getElementById('friend-gate-action-btn');
+        if (friendLogBox && friendBtn) {
+          friendLogBox.classList.remove('hidden');
+          document.getElementById('friend-logged-in-username').innerText = currentUser.username;
+          friendBtn.innerText = 'BEGIN VIBE CALIBRATION →';
+        }
+      } else {
+        profileNavBtn.classList.add('hidden');
+        slot.innerHTML = `
+          <button onclick="openAuthModal('Sign In')" class="px-3 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-mono transition flex items-center gap-1.5 cursor-pointer">
+            <span class="w-1.5 h-1.5 rounded-full bg-crimson"></span>
+            <span>LOGIN</span>
+          </button>
+        `;
+        if (banner) banner.classList.add('hidden');
+
+        const friendLogBox = document.getElementById('friend-logged-in-box');
+        const friendBtn = document.getElementById('friend-gate-action-btn');
+        if (friendLogBox && friendBtn) {
+          friendLogBox.classList.add('hidden');
+          friendBtn.innerText = 'LOGIN TO BEGIN VIBE CALIBRATION →';
+        }
+      }
+    };
+
+    window.logout = function() {
+      currentUser = null;
+      localStorage.removeItem('kinetic_active_user');
+      window.updateAuthUI();
+      window.showView('create');
+    };
+
+    window.handleAuthSubmit = async function() {
+      const u = document.getElementById('auth-user').value.trim();
+      const p = document.getElementById('auth-pass').value.trim();
+      const r = document.getElementById('auth-ref').value.trim().toUpperCase();
+
+      if (!u || !p) return alert('Enter both username and password.');
+
+      const cleanKey = u.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+      try {
+        if (!isFirestoreReady) throw new Error("Firestore not initialized.");
+
+        const userDocRef = fsDb.collection('users').doc(cleanKey);
+        const docSnap = await userDocRef.get();
+
+        if (authIsSignup) {
+          if (docSnap.exists) return alert('Username is already registered. Please sign in.');
+
+          const myRef = 'REF-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+
+          if (r) {
+            const refQuery = await fsDb.collection('users').where('referralCode', '==', r).limit(1).get();
+            if (!refQuery.empty) {
+              await refQuery.docs[0].ref.update({
+                referralCount: firebase.firestore.FieldValue.increment(1)
+              });
+            }
+          }
+
+          const userData = { username: u, password: p, referralCode: myRef, referralCount: 0, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+          await userDocRef.set(userData);
+          currentUser = userData;
+        } else {
+          if (!docSnap.exists || docSnap.data().password !== p) {
+            return alert('Invalid username or password.');
+          }
+          currentUser = docSnap.data();
+        }
+
+        localStorage.setItem('kinetic_active_user', JSON.stringify(currentUser));
+        window.closeAuthModal();
+        window.updateAuthUI();
+
+        if (postAuthAction === 'create') {
+          postAuthAction = null;
+          window.startCreatingTest();
+        } else if (postAuthAction === 'take') {
+          postAuthAction = null;
+          window.startFriendQuiz();
+        }
+      } catch (err) {
+        alert('Authentication error: ' + err.message);
+      }
+    };
+
+    // ============================================================
+    // 6. CREATOR WORKFLOW
+    // ============================================================
+    window.handleStartCreatingClick = function() {
+      if (!currentUser) {
+        postAuthAction = 'create';
+        window.openAuthModal('Login to Create Quiz');
+        return;
+      }
+      window.startCreatingTest();
+    };
+
+    window.startCreatingTest = function() {
+      const pool = CATEGORIES_50.filter(c => selectedCategoryIds.has(c.id));
+      activeQuestions = [...pool].sort(() => 0.5 - Math.random()).slice(0, 5);
+      currentQIndex = 0;
+      recordedChoices = [];
+
+      window.showView('question');
+      window.renderQuestionStep();
+    };
+
+    // ============================================================
+    // 7. FRIEND WORKFLOW
+    // ============================================================
+    window.handleFriendGateAction = function() {
+      if (!currentUser) {
+        postAuthAction = 'take';
+        window.openAuthModal('Login to Take Quiz');
+        return;
+      }
+      window.startFriendQuiz();
+    };
+
+    window.startFriendQuiz = function() {
+      currentQIndex = 0;
+      recordedChoices = [];
+      window.showView('question');
+      window.renderQuestionStep();
+    };
+
+    // ============================================================
+    // 8. QUESTION STEP RENDERER
+    // ============================================================
+    window.renderQuestionStep = function() {
+      const q = activeQuestions[currentQIndex];
+      document.getElementById('q-category-label').innerText = q.category;
+      document.getElementById('q-counter').innerText = `0${currentQIndex + 1} / 0${activeQuestions.length}`;
+      document.getElementById('q-progress-bar').style.width = `${((currentQIndex + 1) / activeQuestions.length) * 100}%`;
+      document.getElementById('q-text').innerText = q.question;
+
+      const deck = document.getElementById('q-options');
+      deck.innerHTML = '';
+
+      q.options.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.className = 'w-full text-left p-4 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/20 text-xs font-medium text-slate-200 transition flex items-center justify-between group cursor-pointer';
+        btn.innerHTML = `
+          <span>${opt}</span>
+          <span class="w-2 h-2 rounded-full border border-slate-600 group-hover:border-crimson group-hover:bg-crimson transition"></span>
+        `;
+        btn.onclick = () => window.handleAnswerPick(q, opt);
+        deck.appendChild(btn);
+      });
+    };
+
+    window.handleAnswerPick = async function(qObj, choice) {
+      if (!isFriendMode) {
+        recordedChoices.push({
+          category: qObj.category,
+          question: qObj.question,
+          options: qObj.options,
+          creatorChoice: choice
+        });
+      } else {
+        recordedChoices.push({
+          category: qObj.category,
+          question: qObj.question,
+          takerChoice: choice
+        });
+      }
+
+      if (currentQIndex + 1 < activeQuestions.length) {
+        currentQIndex++;
+        window.renderQuestionStep();
+      } else {
+        if (!isFriendMode) {
+          await window.saveQuiz();
+        } else {
+          await window.calculateMatch();
+        }
+      }
+    };
+
+    // ============================================================
+    // 9. SAVE QUIZ & SHARE GENERATOR
+    // ============================================================
+    window.saveQuiz = async function() {
+      const creatorName = currentUser ? currentUser.username : 'Anonymous';
+      const creatorClean = currentUser ? currentUser.username.toLowerCase() : 'anonymous';
+      const quizId = 'VB-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      try {
+        await fsDb.collection('quizzes').doc(quizId).set({
+          creatorName: creatorName,
+          creatorUsername: creatorClean,
+          questions: recordedChoices,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        const shareUrl = `${window.location.origin}${window.location.pathname}?quiz=${quizId}`;
+        document.getElementById('share-link-input').innerText = shareUrl;
+
+        window.showView('share');
+      } catch (e) {
+        alert('Could not save quiz: ' + e.message);
+      }
+    };
+
+    // ============================================================
+    // 10. COMPATIBILITY CALCULATION & TWO-WAY STORAGE
+    // ============================================================
+    window.calculateMatch = async function() {
+      const takerName = currentUser ? currentUser.username : 'Friend';
+      const takerClean = currentUser ? currentUser.username.toLowerCase() : 'friend';
+
+      try {
+        const docSnap = await fsDb.collection('quizzes').doc(activeQuizId).get();
+        if (!docSnap.exists) return alert('Quiz not found.');
+
+        const quizData = docSnap.data();
+        let matchCount = 0;
+        const comparisons = [];
+
+        quizData.questions.forEach((orig, idx) => {
+          const friendAns = recordedChoices[idx];
+          const isMatch = orig.creatorChoice.trim().toLowerCase() === friendAns.takerChoice.trim().toLowerCase();
+          if (isMatch) matchCount++;
+
+          comparisons.push({
+            category: orig.category,
+            question: orig.question,
+            creatorChoice: orig.creatorChoice,
+            takerChoice: friendAns.takerChoice,
+            isMatch: isMatch
+          });
+        });
+
+        const total = quizData.questions.length;
+        const scorePct = Math.round((matchCount / total) * 100);
+
+        // Store attempt so Creator can inspect it inside Dashboard
+        await fsDb.collection('attempts').add({
+          quizId: activeQuizId,
+          creatorName: quizData.creatorName,
+          creatorUsername: quizData.creatorUsername || quizData.creatorName.toLowerCase(),
+          takerName: takerName,
+          takerUsername: takerClean,
+          scorePercentage: scorePct,
+          comparisons: comparisons,
+          submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        window.showView('result');
+        document.getElementById('match-score-big').innerText = `${scorePct}%`;
+
+        let tier = "Surface Level NPC Energy 🤖";
+        if (scorePct >= 80) tier = "Unbreakable Soul Resonance 💅";
+        else if (scorePct >= 60) tier = "High-Caliber Inner Circle 🔥";
+        else if (scorePct >= 40) tier = "Casual Acquaintance Orbit 🪐";
+
+        document.getElementById('match-tier-badge').innerText = tier;
+
+        const container = document.getElementById('answers-comparison-list');
+        container.innerHTML = '';
+
+        comparisons.forEach(c => {
+          const row = document.createElement('div');
+          row.className = 'p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-[11px]';
+          row.innerHTML = `
+            <div class="flex justify-between font-mono text-[9px] mb-1">
+              <span class="text-slate-400">${c.category}</span>
+              <span class="${c.isMatch ? 'text-emerald-400' : 'text-crimson'} font-bold">
+                ${c.isMatch ? 'ALIGNED ✓' : 'DIVERGENT ✕'}
+              </span>
+            </div>
+            <div class="text-slate-200 font-medium mb-1.5">${c.question}</div>
+            <div class="text-[10px] text-slate-400">
+              ${quizData.creatorName}: <span class="text-white">${c.creatorChoice}</span> | 
+              You: <span class="text-white">${c.takerChoice}</span>
+            </div>
+          `;
+          container.appendChild(row);
+        });
+      } catch (e) {
+        alert('Could not compute score: ' + e.message);
+      }
+    };
+
+    // ============================================================
+    // 11. INSTAGRAM STORY EXPORT WITH DYNAMIC QR CODE
+    // ============================================================
+    window.exportStoryCard = async function() {
+      const exportBtn = event?.currentTarget;
+      const originalText = exportBtn ? exportBtn.innerHTML : '';
+      if (exportBtn) {
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = `<span>⏳</span> <span>GENERATING HIGH-RES CARD...</span>`;
+      }
+
+      try {
+        const template = document.getElementById('story-card-template');
+        
+        // 1. Populate text & scores
+        const scoreText = document.getElementById('match-score-big').innerText;
+        const tierText = document.getElementById('match-tier-badge').innerText;
+        const creator = document.getElementById('friend-creator-name')?.innerText || (currentUser ? currentUser.username : 'Creator');
+        const taker = document.getElementById('friend-logged-in-username')?.innerText || (currentUser ? currentUser.username : 'Friend');
+
+        document.getElementById('story-creator-name').innerText = `@${creator}`;
+        document.getElementById('story-taker-name').innerText = `@${taker}`;
+        document.getElementById('story-score').innerText = scoreText;
+        document.getElementById('story-tier').innerText = tierText;
+        document.getElementById('story-app-url').innerText = window.location.host;
+
+        // 2. Determine target link for QR code
+        const targetQuizId = activeQuizId || new URLSearchParams(window.location.search).get('quiz');
+        const targetUrl = targetQuizId 
+          ? `${window.location.origin}${window.location.pathname}?quiz=${targetQuizId}`
+          : `${window.location.origin}${window.location.pathname}`;
+
+        // 3. Render Crisp QR code to Canvas
+        const qrCanvas = document.getElementById('story-qr-canvas');
+        await QRCode.toCanvas(qrCanvas, targetUrl, {
+          width: 280,
+          margin: 1,
+          color: {
+            dark: '#08080C',
+            light: '#FFFFFF'
+          },
+          errorCorrectionLevel: 'H'
+        });
+
+        // 4. Populate Highlights
+        const highlightsContainer = document.getElementById('story-highlights-list');
+        highlightsContainer.innerHTML = '';
+        const sampleChoices = (recordedChoices || []).slice(0, 3);
+        sampleChoices.forEach(c => {
+          const isMatch = c.creatorChoice && c.takerChoice 
+            ? (c.creatorChoice.toLowerCase() === c.takerChoice.toLowerCase()) 
+            : true;
+          const row = document.createElement('div');
+          row.className = 'flex justify-between items-center py-1.5 border-b border-white/5';
+          row.innerHTML = `
+            <span class="text-slate-300 font-medium">${c.category}</span>
+            <span class="${isMatch ? 'text-emerald-400' : 'text-[#FF2A54]'} font-bold">
+              ${isMatch ? 'ALIGNED ✓' : 'DIVERGENT ✕'}
+            </span>
+          `;
+          highlightsContainer.appendChild(row);
+        });
+
+        // 5. Render to 1080x1920 PNG Canvas
+        const canvas = await html2canvas(template, {
+          width: 1080,
+          height: 1920,
+          scale: 1,
+          useCORS: true,
+          backgroundColor: '#08080C'
+        });
+
+        // 6. Native Share Sheet or Direct Download
+        canvas.toBlob(async (blob) => {
+          if (!blob) throw new Error('Blob generation failed');
+          const file = new File([blob], `kinetic-match-${scoreText}.png`, { type: 'image/png' });
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: 'KINETIC Compatibility Card',
+                text: `Scan the QR code to check your alignment with us on KINETIC!`
+              });
+              return;
+            } catch (e) {
+              if (e.name === 'AbortError') return;
+            }
+          }
+
+          const downloadUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = `kinetic-match-${scoreText}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(downloadUrl);
+          alert('Match card downloaded! Upload it directly to your Instagram Story.');
+        }, 'image/png');
+
+      } catch (err) {
+        alert('Failed to generate story card: ' + err.message);
+      } finally {
+        if (exportBtn) {
+          exportBtn.disabled = false;
+          exportBtn.innerHTML = originalText;
+        }
+      }
+    };
+
+    // ============================================================
+    // 12. USER PROFILE / DASHBOARD (HISTORY & RESPONSES)
+    // ============================================================
+    window.openProfileDashboard = async function() {
+      if (!currentUser) {
+        window.openAuthModal('Sign in to view your dashboard');
+        return;
+      }
+
+      window.showView('profile');
+      document.getElementById('profile-user-title').innerText = `@${currentUser.username}`;
+      document.getElementById('profile-ref-info').innerText = `Invite Code: ${currentUser.referralCode || 'REF-VIP'} • (${currentUser.referralCount || 0} Friends Joined)`;
+
+      const listContainer = document.getElementById('user-quizzes-list');
+      listContainer.innerHTML = '<div class="text-center py-6 text-xs font-mono text-slate-500">Loading your protocol records...</div>';
+
+      try {
+        const myClean = currentUser.username.toLowerCase();
+
+        // 1. Fetch Quizzes created by this user
+        const quizzesSnap = await fsDb.collection('quizzes')
+          .where('creatorUsername', '==', myClean)
+          .get();
+
+        document.getElementById('user-quizzes-count').innerText = `${quizzesSnap.size} created`;
+
+        if (quizzesSnap.empty) {
+          listContainer.innerHTML = `
+            <div class="p-6 rounded-2xl bg-white/[0.02] border border-white/5 text-center">
+              <p class="text-xs text-slate-400 mb-3">You haven't generated any compatibility quizzes yet.</p>
+              <button onclick="showView('create')" class="px-4 py-2 rounded-xl bg-crimson text-white font-mono text-xs font-bold">
+                Create Your First Quiz →
+              </button>
+            </div>
+          `;
+          return;
+        }
+
+        // 2. Fetch Attempts for all quizzes
+        const attemptsSnap = await fsDb.collection('attempts')
+          .where('creatorUsername', '==', myClean)
+          .get();
+
+        const attemptsByQuiz = {};
+        attemptsSnap.forEach(doc => {
+          const att = doc.data();
+          if (!attemptsByQuiz[att.quizId]) attemptsByQuiz[att.quizId] = [];
+          attemptsByQuiz[att.quizId].push(att);
+        });
+
+        // 3. Render Cards
+        listContainer.innerHTML = '';
+        quizzesSnap.forEach(doc => {
+          const qId = doc.id;
+          const qData = doc.data();
+          const attempts = attemptsByQuiz[qId] || [];
+          const quizUrl = `${window.location.origin}${window.location.pathname}?quiz=${qId}`;
+
+          const card = document.createElement('div');
+          card.className = 'p-4 rounded-2xl bg-white/[0.02] border border-white/10 text-xs';
+          
+          let friendsHtml = '';
+          if (attempts.length === 0) {
+            friendsHtml = `<p class="text-[10px] font-mono text-slate-500 italic mt-2">No friends have taken this quiz yet. Share the link below to get answers!</p>`;
+          } else {
+            friendsHtml = `<div class="mt-3 space-y-2 border-t border-white/5 pt-2">
+              <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Friend Results:</span>
+            `;
+            attempts.forEach(att => {
+              friendsHtml += `
+                <div class="flex items-center justify-between p-2 rounded-xl bg-black/40 border border-white/5">
+                  <div>
+                    <span class="font-bold text-white text-[11px]">${att.takerName}</span>
+                    <span class="text-[9px] font-mono text-slate-500 block">Match Score: <span class="${att.scorePercentage >= 60 ? 'text-emerald-400' : 'text-crimson'} font-bold">${att.scorePercentage}%</span></span>
+                  </div>
+                  <button onclick='inspectFriendBreakdown(${JSON.stringify(att.takerName)}, ${JSON.stringify(att.comparisons)})' class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[9px] font-mono text-slate-300 cursor-pointer">
+                    View Answers 👁️
+                  </button>
+                </div>
+              `;
+            });
+            friendsHtml += `</div>`;
+          }
+
+          card.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-mono font-bold text-gold text-xs">${qId}</span>
+              <span class="px-2 py-0.5 rounded-full bg-crimson/15 text-crimson font-mono text-[10px]">${attempts.length} Answered</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mb-3">${(qData.questions || []).length} benchmark pillars configured.</div>
+            
+            <div class="grid grid-cols-2 gap-2 mb-2">
+              <button onclick="navigator.clipboard.writeText('${quizUrl}'); alert('Quiz link copied!');" class="w-full bg-white/5 hover:bg-white/10 text-slate-300 font-mono text-[10px] py-2 rounded-xl border border-white/10 cursor-pointer">
+                📋 Copy Link
+              </button>
+              <button onclick="shareReminder('${quizUrl}')" class="w-full bg-emerald-600/80 hover:bg-emerald-600 text-white font-mono text-[10px] py-2 rounded-xl cursor-pointer">
+                💬 Remind on WhatsApp
+              </button>
+            </div>
+
+            ${friendsHtml}
+          `;
+          listContainer.appendChild(card);
+        });
+
+      } catch (err) {
+        listContainer.innerHTML = `<div class="text-center py-4 text-xs font-mono text-crimson">Error loading history: ${err.message}</div>`;
+      }
+    };
+
+    window.shareReminder = function(url) {
+      const text = encodeURIComponent(`Hey! You still haven't tested your compatibility with me on KINETIC. Take the 5 scenarios here: ${url}`);
+      window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+    };
+
+    window.inspectFriendBreakdown = function(friendName, comparisons) {
+      document.getElementById('breakdown-modal-title').innerText = `${friendName} vs You`;
+      const container = document.getElementById('breakdown-modal-content');
+      container.innerHTML = '';
+
+      comparisons.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-[11px]';
+        item.innerHTML = `
+          <div class="flex justify-between font-mono text-[9px] mb-1">
+            <span class="text-slate-400">${c.category}</span>
+            <span class="${c.isMatch ? 'text-emerald-400' : 'text-crimson'} font-bold">
+              ${c.isMatch ? 'ALIGNED ✓' : 'DIVERGENT ✕'}
+            </span>
+          </div>
+          <div class="text-slate-200 font-medium mb-1.5">${c.question}</div>
+          <div class="text-[10px] text-slate-400">
+            Your Choice: <span class="text-gold">${c.creatorChoice}</span><br>
+            ${friendName}'s Choice: <span class="text-white">${c.takerChoice}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+
+      document.getElementById('breakdown-modal').classList.remove('hidden');
+      document.getElementById('breakdown-modal').classList.add('flex');
+    };
+
+    window.closeBreakdownModal = function() {
+      document.getElementById('breakdown-modal').classList.add('hidden');
+      document.getElementById('breakdown-modal').classList.remove('flex');
+    };
+
+    // ============================================================
+    // 13. SHARING UTILITIES
+    // ============================================================
+    window.copyQuizLink = function() {
+      const url = document.getElementById('share-link-input').innerText;
+      navigator.clipboard.writeText(url);
+      alert('Quiz link copied to clipboard.');
+    };
+
+    window.shareOnWhatsApp = function() {
+      const url = document.getElementById('share-link-input').innerText;
+      const text = encodeURIComponent(`Let's see how well you actually know me. Check our vibe compatibility on KINETIC: ${url}`);
+      window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+    };
+
+    // ============================================================
+    // 14. ROUTING & GESTURES
+    // ============================================================
+    async function checkUrlRouting() {
+      const params = new URLSearchParams(window.location.search);
+      const quizParam = params.get('quiz');
+
+      if (quizParam) {
+        try {
+          const docSnap = await fsDb.collection('quizzes').doc(quizParam).get();
+          if (!docSnap.exists) {
+            alert('Quiz link is invalid or has expired.');
+            window.location.href = window.location.pathname;
+            return;
+          }
+
+          const quizData = docSnap.data();
+          isFriendMode = true;
+          activeQuizId = quizParam;
+          activeQuestions = quizData.questions;
+
+          window.showView('friend-gate');
+          document.getElementById('friend-creator-name').innerText = quizData.creatorName;
+          window.updateAuthUI();
+        } catch (e) {
+          alert('Could not retrieve quiz: ' + e.message);
+        }
+      }
+    }
+
+    window.renderCategoryChips = function() {
+      const container = document.getElementById('category-tag-cloud');
+      container.innerHTML = '';
+
+      CATEGORIES_50.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'px-2.5 py-1 rounded-xl text-[10px] font-mono border transition-all cursor-pointer ' + 
+          (selectedCategoryIds.has(c.id) 
+            ? 'bg-crimson/15 border-crimson/40 text-crimson' 
+            : 'bg-white/5 border-white/10 text-slate-500');
+        btn.innerText = c.category;
+        btn.onclick = () => {
+          if (selectedCategoryIds.has(c.id)) {
+            if (selectedCategoryIds.size <= 5) return alert('Minimum 5 categories required for a test.');
+            selectedCategoryIds.delete(c.id);
+            btn.className = 'px-2.5 py-1 rounded-xl text-[10px] font-mono border transition-all bg-white/5 border-white/10 text-slate-500 cursor-pointer';
+          } else {
+            selectedCategoryIds.add(c.id);
+            btn.className = 'px-2.5 py-1 rounded-xl text-[10px] font-mono border transition-all bg-crimson/15 border-crimson/40 text-crimson cursor-pointer';
+          }
+          document.getElementById('category-badge').innerText = `${selectedCategoryIds.size} ACTIVE`;
+        };
+        container.appendChild(btn);
+      });
+    };
+
+    function initCursor() {
+      const cursor = document.getElementById('custom-cursor');
+      const dot = document.getElementById('cursor-dot');
+      if (!cursor || !dot) return;
+
+      window.addEventListener('mousemove', (e) => {
+        cursor.style.left = e.clientX + 'px';
+        cursor.style.top = e.clientY + 'px';
+        dot.style.left = e.clientX + 'px';
+        dot.style.top = e.clientY + 'px';
+      });
+
+      document.querySelectorAll('button, a, input').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          cursor.style.transform = 'translate(-50%, -50%) scale(1.6)';
+          cursor.style.borderColor = '#FFB800';
+        });
+        el.addEventListener('mouseleave', () => {
+          cursor.style.transform = 'translate(-50%, -50%) scale(1)';
+          cursor.style.borderColor = '#FF2A54';
+        });
+      });
+    }
+
+    function initTouchGestures() {
+      window.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        const ripple = document.createElement('div');
+        ripple.className = 'touch-ripple';
+        const size = 60;
+        ripple.style.width = size + 'px';
+        ripple.style.height = size + 'px';
+        ripple.style.left = (touch.clientX - size/2) + 'px';
+        ripple.style.top = (touch.clientY - size/2) + 'px';
+        document.body.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 500);
+      });
+    }
+
+    // BOOTSTRAP
+    window.addEventListener('DOMContentLoaded', () => {
+      initCursor();
+      initTouchGestures();
+      window.updateAuthUI();
+      window.renderCategoryChips();
+      checkUrlRouting();
+    });
+  </script>
+</body>
+</html>

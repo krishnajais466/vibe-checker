@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KINETIC — Admin Dashboard</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            title: ['"Syne"', 'sans-serif'],
+            sans: ['"Space Grotesk"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            noir: '#08080C',
+            card: '#101118',
+            crimson: '#FF2A54',
+            gold: '#FFB800',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Firebase Cloud SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body class="bg-noir text-slate-100 min-h-screen font-sans flex flex-col justify-between selection:bg-crimson selection:text-white">
+
+  <!-- ADMIN LOGIN GATE -->
+  <div id="admin-gate" class="fixed inset-0 bg-noir flex items-center justify-center p-4 z-50">
+    <div class="bg-card border border-white/10 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-center">
+      <div class="w-12 h-12 rounded-2xl bg-gold/15 text-gold flex items-center justify-center mx-auto mb-4 border border-gold/30 font-bold font-mono">
+        ⚡
+      </div>
+      <h2 class="font-title text-xl font-bold mb-1 text-white">Admin Protocol</h2>
+      <p class="text-xs text-slate-400 mb-6">Enter master password to access stored user information.</p>
+
+      <input type="password" id="gate-pass" placeholder="Enter Admin Password" class="w-full bg-noir border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-gold mb-3 font-mono text-center">
+      
+      <button onclick="verifyAdminPass()" class="w-full bg-gold hover:bg-gold/90 text-noir font-mono font-bold py-3 rounded-xl text-xs transition">
+        ACCESS DATABASE →
+      </button>
+
+      <a href="index.html" class="inline-block mt-4 text-[10px] font-mono text-slate-500 hover:text-slate-300">
+        ← Return to Main Application
+      </a>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD CONTAINER (Visible after Login) -->
+  <div id="admin-dashboard" class="hidden w-full max-w-6xl mx-auto px-4 py-8 flex-grow">
+    
+    <!-- Top Header -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 border-b border-white/10 gap-4 mb-8">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <h1 class="font-title text-2xl font-bold tracking-tight text-white">Live Telemetry Dashboard</h1>
+        </div>
+        <p class="text-xs font-mono text-slate-400">Direct inspect access for project: <span class="text-gold">vibe-checker-4a743</span></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="loadDatabaseData()" class="px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-mono transition text-slate-300">
+          🔄 Refresh Feed
+        </button>
+        <button onclick="logoutAdmin()" class="px-4 py-2 rounded-xl bg-crimson/15 border border-crimson/30 hover:bg-crimson/25 text-xs font-mono transition text-crimson">
+          Lock & Exit
+        </button>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div class="bg-card border border-white/10 p-5 rounded-2xl">
+        <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">TOTAL USERS</span>
+        <div id="stat-users" class="font-title text-3xl font-extrabold text-white">0</div>
+      </div>
+      <div class="bg-card border border-white/10 p-5 rounded-2xl">
+        <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">TOTAL QUIZZES GENERATED</span>
+        <div id="stat-quizzes" class="font-title text-3xl font-extrabold text-gold">0</div>
+      </div>
+      <div class="bg-card border border-white/10 p-5 rounded-2xl">
+        <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-1">FRIEND ATTEMPTS & MATCHES</span>
+        <div id="stat-attempts" class="font-title text-3xl font-extrabold text-crimson">0</div>
+      </div>
+    </div>
+
+    <!-- Data Tables Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      
+      <!-- Users Table -->
+      <div class="bg-card border border-white/10 rounded-2xl p-5">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-title text-sm font-bold text-white flex items-center gap-2">
+            <span>👤</span> Registered User Accounts
+          </h3>
+          <span class="text-[10px] font-mono text-slate-500" id="users-count-tag">0 records</span>
+        </div>
+        <div class="overflow-x-auto max-h-96 overflow-y-auto no-scrollbar">
+          <table class="w-full text-left text-xs">
+            <thead class="text-[10px] font-mono uppercase text-slate-400 border-b border-white/5">
+              <tr>
+                <th class="pb-2">Username</th>
+                <th class="pb-2">Password</th>
+                <th class="pb-2">Ref Code</th>
+                <th class="pb-2 text-right">Invites</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body" class="divide-y divide-white/5 text-slate-300 font-mono text-[11px]">
+              <tr><td colspan="4" class="py-4 text-center text-slate-500">Loading records...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Attempts Table -->
+      <div class="bg-card border border-white/10 rounded-2xl p-5">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-title text-sm font-bold text-white flex items-center gap-2">
+            <span>🎯</span> Match Attempts & Results
+          </h3>
+          <span class="text-[10px] font-mono text-slate-500" id="attempts-count-tag">0 records</span>
+        </div>
+        <div class="overflow-x-auto max-h-96 overflow-y-auto no-scrollbar">
+          <table class="w-full text-left text-xs">
+            <thead class="text-[10px] font-mono uppercase text-slate-400 border-b border-white/5">
+              <tr>
+                <th class="pb-2">Creator</th>
+                <th class="pb-2">Friend (Taker)</th>
+                <th class="pb-2 text-right">Match %</th>
+              </tr>
+            </thead>
+            <tbody id="attempts-table-body" class="divide-y divide-white/5 text-slate-300 font-mono text-[11px]">
+              <tr><td colspan="3" class="py-4 text-center text-slate-500">Loading records...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Active Quizzes Inspection -->
+    <div class="mt-8 bg-card border border-white/10 rounded-2xl p-5">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-title text-sm font-bold text-white flex items-center gap-2">
+          <span>📋</span> Active Quiz Configurations
+        </h3>
+        <span class="text-[10px] font-mono text-slate-500" id="quizzes-count-tag">0 records</span>
+      </div>
+      <div id="quizzes-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <!-- Rendered Quiz Cards -->
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="w-full max-w-6xl mx-auto px-4 py-6 text-center text-[11px] font-mono text-slate-500 border-t border-white/5 mt-12">
+    KINETIC Telemetry Control Panel • Krishna Jaiswal
+  </footer>
+
+  <script>
+    const ADMIN_SECRET = "9326862270";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtAUOAvq7AUVTn1L53xcB9iGtn_vFyYJM",
+      authDomain: "vibe-checker-4a743.firebaseapp.com",
+      projectId: "vibe-checker-4a743",
+      storageBucket: "vibe-checker-4a743.firebasestorage.app",
+      messagingSenderId: "859160087145",
+      appId: "1:859160087145:web:9c53a694892a481a5270f8",
+      measurementId: "G-J1G315SJ5B"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const fsDb = firebase.firestore();
+
+    function verifyAdminPass() {
+      const p = document.getElementById('gate-pass').value.trim();
+      if (p === ADMIN_SECRET) {
+        sessionStorage.setItem('kinetic_admin_auth', 'true');
+        document.getElementById('admin-gate').classList.add('hidden');
+        document.getElementById('admin-dashboard').classList.remove('hidden');
+        loadDatabaseData();
+      } else {
+        alert('Invalid Admin Key.');
+      }
+    }
+
+    function logoutAdmin() {
+      sessionStorage.removeItem('kinetic_admin_auth');
+      location.reload();
+    }
+
+    // Auto-login check
+    window.addEventListener('DOMContentLoaded', () => {
+      if (sessionStorage.getItem('kinetic_admin_auth') === 'true') {
+        document.getElementById('admin-gate').classList.add('hidden');
+        document.getElementById('admin-dashboard').classList.remove('hidden');
+        loadDatabaseData();
+      }
+    });
+
+    async function loadDatabaseData() {
+      try {
+        // 1. Fetch Users
+        const usersSnap = await fsDb.collection('users').get();
+        document.getElementById('stat-users').innerText = usersSnap.size;
+        document.getElementById('users-count-tag').innerText = `${usersSnap.size} records`;
+
+        const uTbody = document.getElementById('users-table-body');
+        uTbody.innerHTML = '';
+        if (usersSnap.empty) {
+          uTbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-slate-500">No users found.</td></tr>`;
+        } else {
+          usersSnap.forEach(doc => {
+            const u = doc.data();
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="py-2.5 font-bold text-white">${u.username || doc.id}</td>
+              <td class="py-2.5 text-slate-400 select-all">${u.password || '—'}</td>
+              <td class="py-2.5 text-gold">${u.referralCode || '—'}</td>
+              <td class="py-2.5 text-right font-bold text-crimson">${u.referralCount || 0}</td>
+            `;
+            uTbody.appendChild(tr);
+          });
+        }
+
+        // 2. Fetch Attempts
+        const attemptsSnap = await fsDb.collection('attempts').get();
+        document.getElementById('stat-attempts').innerText = attemptsSnap.size;
+        document.getElementById('attempts-count-tag').innerText = `${attemptsSnap.size} records`;
+
+        const aTbody = document.getElementById('attempts-table-body');
+        aTbody.innerHTML = '';
+        if (attemptsSnap.empty) {
+          aTbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-slate-500">No match attempts recorded yet.</td></tr>`;
+        } else {
+          attemptsSnap.forEach(doc => {
+            const a = doc.data();
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="py-2.5 font-bold text-white">${a.creatorName || '—'}</td>
+              <td class="py-2.5 text-slate-300">${a.takerName || '—'}</td>
+              <td class="py-2.5 text-right font-bold ${a.scorePercentage >= 60 ? 'text-emerald-400' : 'text-crimson'}">${a.scorePercentage}%</td>
+            `;
+            aTbody.appendChild(tr);
+          });
+        }
+
+        // 3. Fetch Quizzes
+        const quizzesSnap = await fsDb.collection('quizzes').get();
+        document.getElementById('stat-quizzes').innerText = quizzesSnap.size;
+        document.getElementById('quizzes-count-tag').innerText = `${quizzesSnap.size} records`;
+
+        const qGrid = document.getElementById('quizzes-cards-grid');
+        qGrid.innerHTML = '';
+        if (quizzesSnap.empty) {
+          qGrid.innerHTML = `<div class="col-span-full py-4 text-center text-slate-500 text-xs font-mono">No active quizzes.</div>`;
+        } else {
+          quizzesSnap.forEach(doc => {
+            const q = doc.data();
+            const card = document.createElement('div');
+            card.className = 'bg-noir border border-white/5 rounded-xl p-3 text-xs font-mono';
+            card.innerHTML = `
+              <div class="flex justify-between items-center mb-1.5">
+                <span class="text-gold font-bold">${doc.id}</span>
+                <span class="text-[10px] text-slate-400">${q.creatorName}</span>
+              </div>
+              <div class="text-[10px] text-slate-400">${(q.questions || []).length} Categories Configured</div>
+            `;
+            qGrid.appendChild(card);
+          });
+        }
+
+      } catch (err) {
+        alert('Data load error: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

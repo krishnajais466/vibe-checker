@@ -1,0 +1,202 @@
+{
+  "quizzes": [
+    {
+      "id": "q2nmsnc",
+      "creator_name": "d",
+      "creator_email": "krishnajais4666@gmail.com",
+      "created_at": "2026-09-29T13:40:19.777Z"
+    },
+    {
+      "id": "yneqmtu",
+      "creator_name": "s",
+      "creator_email": "krishnajais466@gmail.com",
+      "created_at": "2026-09-29T13:40:41.742Z"
+    },
+    {
+      "id": "i1v6ou6",
+      "creator_name": "d",
+      "creator_email": "krishnajais4666@gmail.com",
+      "created_at": "2026-09-29T13:54:11.770Z"
+    },
+    {
+      "id": "VIBE-DJOZPG",
+      "userId": "ANON",
+      "creatorName": "Anonymous",
+      "createdAt": "2026-09-29T14:23:11.341Z"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q2nmsnc_q_1",
+      "quiz_id": "q2nmsnc",
+      "category": "Acoustics",
+      "question_text": "How does audio fit into your cognitive hours?",
+      "creator_choice": "Intentional episodic album listening"
+    },
+    {
+      "id": "q2nmsnc_q_2",
+      "quiz_id": "q2nmsnc",
+      "category": "Culinary Palate",
+      "question_text": "Encountering a foreign, hyper-niche dish:",
+      "creator_choice": "Stick strictly to trusted formulas"
+    },
+    {
+      "id": "q2nmsnc_q_3",
+      "quiz_id": "q2nmsnc",
+      "category": "Digital Diet",
+      "question_text": "Your operational relationship with network media:",
+      "creator_choice": "Ghost account passive consumer"
+    },
+    {
+      "id": "q2nmsnc_q_4",
+      "quiz_id": "q2nmsnc",
+      "category": "Celebrations",
+      "question_text": "Preferred format for commemorating personal milestones:",
+      "creator_choice": "Solitary retreat in distant environment"
+    },
+    {
+      "id": "q2nmsnc_q_5",
+      "quiz_id": "q2nmsnc",
+      "category": "Social Battery",
+      "question_text": "How is depleted mental capacity restored?",
+      "creator_choice": "High-energy collective dynamic"
+    },
+    {
+      "id": "yneqmtu_q_1",
+      "quiz_id": "yneqmtu",
+      "category": "Digital Diet",
+      "question_text": "Your operational relationship with network media:",
+      "creator_choice": "Deliberately detached & offline"
+    },
+    {
+      "id": "yneqmtu_q_2",
+      "quiz_id": "yneqmtu",
+      "category": "Irritations",
+      "question_text": "Everyday human friction that depletes you fastest:",
+      "creator_choice": "Noisy broadcast in public spaces"
+    },
+    {
+      "id": "yneqmtu_q_3",
+      "quiz_id": "yneqmtu",
+      "category": "Core Values",
+      "question_text": "When confronting a moral paradox, what dictates your course?",
+      "creator_choice": "Unbreakable personal ethics"
+    },
+    {
+      "id": "yneqmtu_q_4",
+      "quiz_id": "yneqmtu",
+      "category": "Physicality",
+      "question_text": "Foundation of your physical health regime:",
+      "creator_choice": "Intuitive holistic mobility & food"
+    },
+    {
+      "id": "yneqmtu_q_5",
+      "quiz_id": "yneqmtu",
+      "category": "Affirmation",
+      "question_text": "Primary mechanism for validating comrades:",
+      "creator_choice": "Relentless acts of logistical support"
+    },
+    {
+      "id": "i1v6ou6_q_1",
+      "quiz_id": "i1v6ou6",
+      "category": "Stress Resilience",
+      "question_text": "Under emergency conditions, your default state:",
+      "creator_choice": "Internalized stoic isolation"
+    },
+    {
+      "id": "i1v6ou6_q_2",
+      "quiz_id": "i1v6ou6",
+      "category": "Affirmation",
+      "question_text": "Primary mechanism for validating comrades:",
+      "creator_choice": "Unfiltered verbal recognition"
+    },
+    {
+      "id": "i1v6ou6_q_3",
+      "quiz_id": "i1v6ou6",
+      "category": "Exploration",
+      "question_text": "The quintessential travel endeavor:",
+      "creator_choice": "Unplanned off-grid voyage"
+    },
+    {
+      "id": "i1v6ou6_q_4",
+      "quiz_id": "i1v6ou6",
+      "category": "Creative Vector",
+      "question_text": "Preferred domain of personal creative output:",
+      "creator_choice": "Written word & conceptual essays"
+    },
+    {
+      "id": "i1v6ou6_q_5",
+      "quiz_id": "i1v6ou6",
+      "category": "Workspace",
+      "question_text": "Current physical and digital workspace condition:",
+      "creator_choice": "Systematic functional complexity"
+    },
+    {
+      "id": "VIBE-DJOZPG_Q1",
+      "quizId": "VIBE-DJOZPG",
+      "category": "Solitude Quota",
+      "questionText": "Daily requirement of completely uninterrupted solitude:",
+      "options": [
+        "3+ hours minimum or I crash",
+        "1 hour before sleep is enough",
+        "I wither without social company",
+        "Variable depending on my workload"
+      ],
+      "creatorChoice": "3+ hours minimum or I crash"
+    },
+    {
+      "id": "VIBE-DJOZPG_Q2",
+      "quizId": "VIBE-DJOZPG",
+      "category": "Cinema Taste",
+      "questionText": "Which cinematic genre holds your respect most?",
+      "options": [
+        "Mind-bending psychological thrillers",
+        "Hard sci-fi & space epics",
+        "Raw investigative documentaries",
+        "Witty, character-led dark comedy"
+      ],
+      "creatorChoice": "Raw investigative documentaries"
+    },
+    {
+      "id": "VIBE-DJOZPG_Q3",
+      "quizId": "VIBE-DJOZPG",
+      "category": "Pet Peeves",
+      "questionText": "The human habit that evaporates your patience:",
+      "options": [
+        "Chronic, remorseless tardiness",
+        "Talking loudly over others",
+        "Performative virtue signaling",
+        "Blasting phone audio in public"
+      ],
+      "creatorChoice": "Blasting phone audio in public"
+    },
+    {
+      "id": "VIBE-DJOZPG_Q4",
+      "quizId": "VIBE-DJOZPG",
+      "category": "Money Philosophy",
+      "questionText": "Your instinctual discipline with money:",
+      "options": [
+        "Aggressive compounding investor",
+        "Hedonic experience seeker",
+        "Defensive cash hoarder",
+        "Living paycheck-to-paycheck"
+      ],
+      "creatorChoice": "Living paycheck-to-paycheck"
+    },
+    {
+      "id": "VIBE-DJOZPG_Q5",
+      "quizId": "VIBE-DJOZPG",
+      "category": "Travel DNA",
+      "questionText": "Your ideal journey into the unknown:",
+      "options": [
+        "Unplanned off-grid exploration",
+        "5-star curated luxury retreat",
+        "Solo deep cultural immersion",
+        "High-energy urban expedition"
+      ],
+      "creatorChoice": "5-star curated luxury retreat"
+    }
+  ],
+  "attempts": [],
+  "answers": []
+}
